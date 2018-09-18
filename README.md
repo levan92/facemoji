@@ -1,2 +1,2 @@
 # facemoji
-simple python programme to anonymise faces with emojis 
+simple python program to anonymise faces with emojis 
