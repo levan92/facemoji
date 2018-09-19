@@ -10,6 +10,10 @@ from datetime import datetime
 
 from utils.videoStream import VideoStream
 
+from faceDet.mobnet_dlib import Mobnet_FD as FaceDet
+from faceReg.FR_embedding import FR_openface as FaceReg
+from tracker.deepsort_tracker_FR import DeepSort as Tracker
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-v','--vid_paths', nargs='+', help='Video filepaths/streams for \
                     all cameras, e.g.: 0')
@@ -51,15 +55,11 @@ if video_paths is not None:
     video_paths = temp
 
 num_vid_streams = len(video_paths)
-# print('Video names: {}'.format(cam_names))
-# print('Video paths: {}'.format(video_paths))
 
-# max_n = 3 # max number of largest faces to be processed each frame
-# faceReg = FaceReg(gpu_usage=0.3, model_h5=model_h5, do_flip=do_flip)
-# # faceReg = FaceReg(gpu_usage=0.5, model_h5='nn4.small2.cas-peal.304.unfrozen.h5')
-# faceDet = FaceDet(upsampling=1, max_n = 3, scaleFactor=1.2, minNeighbors=8)
-# classifier = Classifier(clf, clf_type, top_K = None, threshold=-np.inf)
-
+faceReg = FaceReg(gpu_usage=0.5)
+#faceDet network is loaded after faceReg as gpu usage % cannot be specified for faceDet
+faceDet = FaceDet()
+tracker = Tracker()
 # # a list of Masterminds
 # masterminds = []
 # if capture:
@@ -108,9 +108,8 @@ try:
         if stream.more():
             frame = stream.read()
 
-            # bbs, aligned_faces = faceDet.detect_align_faces(frames)
-
-            # embeddings = faceReg.get_embeds(aligned_faces)
+            bbs, aligned_faces = faceDet.detect_align_faces(frame)
+            embeddings = faceReg.get_embeds(aligned_faces)
 
             # emojis = mastermind.update(frame, frame_count, bbs, embeddings))
             # show_frame = drawer.draw_emoji(frame, emojis)
