@@ -27,7 +27,10 @@ class DeepSort(object):
         self.nms_max_overlap = nms_max_overlap
         metric = nn_matching.NearestNeighborDistanceMetric(
             "cosine", max_cosine_distance, nn_budget)
-        self.tracker = Tracker(metric, max_age = max_age)
+        self.tracker = Tracker(metric, 
+                               max_age = max_age, 
+                               n_init=1, #inits track within 1st detection because for facemoji you dont wanna miss any face right at the start
+                               )
 
     # def update_tracks(sequence_dir, detection_file, output_file, in_confidence, nms_max_overlap, min_detection_height, max_cosine_distance, nn_budget, display):
     def update_tracks(self, frame, raw_detections, embeds):
