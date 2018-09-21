@@ -76,7 +76,17 @@ class Tracker:
             self.tracks[track_idx].mark_missed()
         for detection_idx in unmatched_detections:
             self._initiate_track(detections[detection_idx])
-        self.tracks = [t for t in self.tracks if not t.is_deleted()]
+
+        ## Changes to deep_sort for facemoji, because I need to know what track nums were deleted to facilitate release of emoji assigned to it
+        del_tracks = []
+        temp_tracks = []
+        for t in self.tracks:
+            if t.is_deleted():
+                del_tracks.append(t)
+            else:
+                temp_tracks.append(t)
+        self.tracks = temp_tracks
+        # self.tracks = [t for t in self.tracks if not t.is_deleted()]
 
         # Update distance metric.
         active_targets = [t.track_id for t in self.tracks if t.is_confirmed()]
@@ -90,6 +100,7 @@ class Tracker:
             track.features = [track.features[-1]]
         self.metric.partial_fit(
             np.asarray(features), np.asarray(targets), active_targets)
+        return del_tracks
 
     def _match(self, detections):
 

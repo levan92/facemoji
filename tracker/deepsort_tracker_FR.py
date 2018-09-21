@@ -85,9 +85,9 @@ class DeepSort(object):
 
         # Update tracker.
         self.tracker.predict()
-        self.tracker.update(detections)
+        del_tracks = self.tracker.update(detections)
 
-        return self.tracker.tracks
+        return self.tracker.tracks, del_tracks
 
         # # Update visualization.
         # if display:

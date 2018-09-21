@@ -7,6 +7,7 @@ import os
 import numpy as np
 from copy import deepcopy
 from datetime import datetime
+from tqdm import tqdm
 
 from utils.misc import process_emoji_dir
 from utils.videoStream import VideoStream
@@ -20,16 +21,18 @@ from tracker.deepsort_tracker_FR import DeepSort as Tracker
 parser = argparse.ArgumentParser()
 parser.add_argument('-v','--vid_paths', nargs='+', help='Video filepaths/streams for \
                     all cameras, e.g.: 0',required=True)
+parser.add_argument('--rtsp',help='Additional flag for when RTSP stream is the input',action='store_true')
 parser.add_argument('--time',help='Verbose toggle to show timings',action='store_true')
 # parser.add_argument('--display',help='Verbose toggle to display intermediate live video',action='store_true')
 parser.add_argument('-e','--emo_dir',help='Emoji directory', type=str,required=True)
-parser.add_argument('--capture',help='Dir for storing frames', type=str)
+parser.add_argument('--out',help='Dir for storing processed frames', type=str)
 
 args = parser.parse_args()
 video_paths = args.vid_paths
+rtsp_mode = args.rtsp
 # show_live = args.display
 show_live = True
-out_dir = args.capture
+out_dir = args.out
 show_time = args.time
 emo_dir = os.path.normpath(args.emo_dir)
 assert os.path.isdir(emo_dir),'emo_dir is not a directory!'
@@ -44,21 +47,26 @@ if out_dir is not None:
     except Exception as e:
         print('Out dir exception:{}'.format(e))
         # capture = False
-    print('Will attempt to write out to {}, is okay if not present now.'.format(out_dir))
+    # print('Will attempt to write out to {}, is okay if not present now.'.format(out_dir))
 else:
     capture = False
 
 cam_names = []
-if video_paths is not None:
+if rtsp_mode:
+    cam_names = ['rtsp_stream0']
+    video_mode = False
+else:
     temp = []
     for vid in video_paths:
         if vid.isdigit():
             int_vid = int(vid)
             temp.append(int_vid)
             cam_names.append('Webcam{}'.format(int_vid))
+            video_mode = False
         else:
+            video_mode = True
             temp.append(vid)
-            cam_names.append(os.path.basename(vid))
+            cam_names.append(''.join(os.path.basename(vid).split('.')[:-1]))
     video_paths = temp
 
 num_vid_streams = len(video_paths)
@@ -67,25 +75,37 @@ video_path = video_paths[0]
 cam_name = cam_names[0]
 print('Video name: {}'.format(cam_name))
 print('Video path: {}'.format(video_path))
+if video_mode:
+    # then video stream does not drop frames to maintain real-time-liness, therefore, queue maxlen is None
+    stream = VideoStream(cam_name, video_path, queueSize = None)
+else:
+    stream = VideoStream(cam_name, video_path)  
+if video_mode:
+    video_info = stream.getInfo()
 
 if capture:
-    vm_writeDir = os.path.join(out_dir, 'outFrames')
-else:
-    vm_writeDir = None
+    out_frames = []
+    # vm_writeDir = os.path.join(out_dir, 'outFrames')
+# else:
+    # vm_writeDir = None
 
 faceReg = FaceReg(gpu_usage=0.5)
 #faceDet network is loaded after faceReg as gpu usage % cannot be specified for faceDet
-faceDet = FaceDet(threshold=0.3)
-mastermind = Mastermind(cam_name, emo_list, Tracker, nn_budget=10)
+faceDet = FaceDet(threshold=0.1)
+mastermind = Mastermind(cam_name, emo_list, Tracker, max_age=2, nn_budget=10)
 drawer = Drawer(emo_dir)
-stream = VideoStream(cam_name, video_path, writeDir=vm_writeDir) 
 frame_count = 0
+started = False
 stream.start()
+if not video_mode:
+    time.sleep(1)
 start_whole = time.time()
 try:
     while True:
         if stream.more():
             # print('Reading for new frame')
+            if not started:
+                started = True
             frame = stream.read()
 
             bbs, aligned_faces = faceDet.detect_align_faces(frame)
@@ -96,26 +116,44 @@ try:
             if show_live:
                 cv2.imshow('',show_frame)
             if capture:
-                stream.capture(frame_count)            
-            # mastermind.reset()
+                out_frames.append(show_frame)
+                # stream.capture(frame_count)            
             frame_count += 1
 
             # cv2.waitKey(0)
-        if cv2.waitKey(1) & 0xFF == ord('q'): # FOR CNN
-            print('Avg FPS:', frame_count/(time.time()-start_whole))
+            if cv2.waitKey(1) & 0xFF == ord('q'): # FOR CNN
+                print('Q pressed! Terminating..')
+                break
+        elif video_mode and started:
+            print('Video Completed!')
             break
 
 except KeyboardInterrupt:
-    print('Avg FPS:', frame_count/(time.time()-start_whole))
+    print('KeyboardInterrupt! Terminating..')
     cv2.destroyAllWindows()
-    print('Killing facemoji..')
-    os._exit(0)
 
-avg_fps = frame_count/(time.time()-start_whole)
-print('Avg FPS:', avg_fps)
-
-# video.release()
-# vid.stop()
+processing_fps = int(frame_count/(time.time()-start_whole))
+print('Avg FPS:', processing_fps)
+stream.stop()
 cv2.destroyAllWindows()
-print('Killing facemoji..')
-os._exit(0)
+
+print('Writing out video..')
+if video_mode:
+    write_fps = video_info['fps']
+    out_name = cam_name
+else:
+    write_fps = processing_fps
+    out_name = 'out' 
+
+out_path = os.path.join(out_dir, '{}.avi'.format(out_name))
+i = 1
+while os.path.exists(out_path):
+    out_path = os.path.join(out_dir, '{}_{}.avi'.format(out_name, i))
+    i += 1
+h, w = out_frames[0].shape[:2]
+fourcc = cv2.VideoWriter_fourcc(*'h264') 
+out = cv2.VideoWriter(out_path, fourcc, write_fps, (w,h))
+for frame in tqdm(out_frames):
+    out.write(frame)
+out.release()
+print('Written to {} @ {:0.2f}FPS'.format(out_path, write_fps))
