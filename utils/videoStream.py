@@ -126,6 +126,7 @@ class VideoStream:
     def stop(self):
         self.stopped = True
         # self.stream.release()
+        print('VideoStream stopped!')
 
     # def capture(self, frame_count, ext='jpg'):
     #     path = os.path.join(self.writeDir, '{}_{}.{}'.format(self.camName, str(frame_count), ext))

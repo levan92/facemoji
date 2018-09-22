@@ -11,6 +11,7 @@ from tqdm import tqdm
 
 from utils.misc import process_emoji_dir
 from utils.videoStream import VideoStream
+from utils.framesStream import FramesStream
 from utils.mastermind import Mastermind
 from utils.drawer import Drawer
 
@@ -22,18 +23,20 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-v','--vid_paths', nargs='+', help='Video filepaths/streams for \
                     all cameras, e.g.: 0',required=True)
 parser.add_argument('--rtsp',help='Additional flag for when RTSP stream is the input',action='store_true')
+parser.add_argument('--frames',help='Additional flag for input vid_path is a dir containing frames',action='store_true')
 parser.add_argument('--time',help='Verbose toggle to show timings',action='store_true')
-# parser.add_argument('--display',help='Verbose toggle to display intermediate live video',action='store_true')
 parser.add_argument('-e','--emo_dir',help='Emoji directory', type=str,required=True)
 parser.add_argument('--out',help='Dir for storing processed frames', type=str)
+parser.add_argument('--outFrames',help='Flag for output to be given as frames instead',action='store_true')
 
+show_live = True
 args = parser.parse_args()
 video_paths = args.vid_paths
 rtsp_mode = args.rtsp
-# show_live = args.display
-show_live = True
+frames_mode = args.frames
 out_dir = args.out
 show_time = args.time
+out_frames_mode = args.outFrames
 emo_dir = os.path.normpath(args.emo_dir)
 assert os.path.isdir(emo_dir),'emo_dir is not a directory!'
 emo_list = process_emoji_dir(emo_dir)
@@ -55,6 +58,9 @@ cam_names = []
 if rtsp_mode:
     cam_names = ['rtsp_stream0']
     video_mode = False
+elif frames_mode:
+    cam_names = [os.path.basename(os.path.normpath(video_paths[0]))]
+    video_mode = True
 else:
     temp = []
     for vid in video_paths:
@@ -66,7 +72,7 @@ else:
         else:
             video_mode = True
             temp.append(vid)
-            cam_names.append(''.join(os.path.basename(vid).split('.')[:-1]))
+            cam_names.append(''.join(os.path.basename(os.path.normpath(vid)).split('.')[:-1]))
     video_paths = temp
 
 num_vid_streams = len(video_paths)
@@ -75,11 +81,17 @@ video_path = video_paths[0]
 cam_name = cam_names[0]
 print('Video name: {}'.format(cam_name))
 print('Video path: {}'.format(video_path))
-if video_mode:
+if frames_mode:
+    print('Frames Stream initializing..')
+    stream = FramesStream(cam_names, video_path)
+elif video_mode:
     # then video stream does not drop frames to maintain real-time-liness, therefore, queue maxlen is None
+    print('Video mode initializing..')
     stream = VideoStream(cam_name, video_path, queueSize = None)
 else:
-    stream = VideoStream(cam_name, video_path)  
+    print('Live video initializing..')
+    stream = VideoStream(cam_name, video_path) 
+
 if video_mode:
     video_info = stream.getInfo()
 
@@ -137,23 +149,37 @@ print('Avg FPS:', processing_fps)
 stream.stop()
 cv2.destroyAllWindows()
 
-print('Writing out video..')
-if video_mode:
+print('Writing output..')
+if frames_mode:
+    write_fps = 25 # default 
+    out_name = cam_name
+elif video_mode:
     write_fps = video_info['fps']
     out_name = cam_name
 else:
     write_fps = processing_fps
     out_name = 'out' 
 
-out_path = os.path.join(out_dir, '{}.avi'.format(out_name))
-i = 1
-while os.path.exists(out_path):
-    out_path = os.path.join(out_dir, '{}_{}.avi'.format(out_name, i))
-    i += 1
-h, w = out_frames[0].shape[:2]
-fourcc = cv2.VideoWriter_fourcc(*'h264') 
-out = cv2.VideoWriter(out_path, fourcc, write_fps, (w,h))
-for frame in tqdm(out_frames):
-    out.write(frame)
-out.release()
-print('Written to {} @ {:0.2f}FPS'.format(out_path, write_fps))
+
+if out_frames_mode:
+    print('..as frames')
+    out_path = os.path.join(out_dir,out_name)
+    if not os.path.isdir(out_path):
+        os.mkdir(out_path)
+    for i, frame in enumerate(tqdm(out_frames)):
+        cv2.imwrite(os.path.join(out_path,'{}.png'.format(i)),frame)
+    print('Written to {} as frames'.format(out_path))
+else:
+    print('..as video')
+    out_path = os.path.join(out_dir, '{}.avi'.format(out_name))
+    i = 1
+    while os.path.exists(out_path):
+        out_path = os.path.join(out_dir, '{}_{}.avi'.format(out_name, i))
+        i += 1
+    h, w = out_frames[0].shape[:2]
+    fourcc = cv2.VideoWriter_fourcc(*'h264') 
+    out = cv2.VideoWriter(out_path, fourcc, write_fps, (w,h))
+    for frame in tqdm(out_frames):
+        out.write(frame)
+    out.release()
+    print('Written to {} @ {:0.2f}FPS'.format(out_path, write_fps))
