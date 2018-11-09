@@ -150,36 +150,37 @@ stream.stop()
 cv2.destroyAllWindows()
 
 print('Writing output..')
-if frames_mode:
-    write_fps = 25 # default 
-    out_name = cam_name
-elif video_mode:
-    write_fps = video_info['fps']
-    out_name = cam_name
-else:
-    write_fps = processing_fps
-    out_name = 'out' 
+if capture:
+    if frames_mode:
+        write_fps = 25 # default 
+        out_name = cam_name
+    elif video_mode:
+        write_fps = video_info['fps']
+        out_name = cam_name
+    else:
+        write_fps = processing_fps
+        out_name = 'out' 
 
 
-if out_frames_mode:
-    print('..as frames')
-    out_path = os.path.join(out_dir,out_name)
-    if not os.path.isdir(out_path):
-        os.mkdir(out_path)
-    for i, frame in enumerate(tqdm(out_frames)):
-        cv2.imwrite(os.path.join(out_path,'{}.png'.format(i)),frame)
-    print('Written to {} as frames'.format(out_path))
-else:
-    print('..as video')
-    out_path = os.path.join(out_dir, '{}.avi'.format(out_name))
-    i = 1
-    while os.path.exists(out_path):
-        out_path = os.path.join(out_dir, '{}_{}.avi'.format(out_name, i))
-        i += 1
-    h, w = out_frames[0].shape[:2]
-    fourcc = cv2.VideoWriter_fourcc(*'h264') 
-    out = cv2.VideoWriter(out_path, fourcc, write_fps, (w,h))
-    for frame in tqdm(out_frames):
-        out.write(frame)
-    out.release()
-    print('Written to {} @ {:0.2f}FPS'.format(out_path, write_fps))
+    if out_frames_mode:
+        print('..as frames')
+        out_path = os.path.join(out_dir,out_name)
+        if not os.path.isdir(out_path):
+            os.mkdir(out_path)
+        for i, frame in enumerate(tqdm(out_frames)):
+            cv2.imwrite(os.path.join(out_path,'{}.png'.format(i)),frame)
+        print('Written to {} as frames'.format(out_path))
+    else:
+        print('..as video')
+        out_path = os.path.join(out_dir, '{}.avi'.format(out_name))
+        i = 1
+        while os.path.exists(out_path):
+            out_path = os.path.join(out_dir, '{}_{}.avi'.format(out_name, i))
+            i += 1
+        h, w = out_frames[0].shape[:2]
+        fourcc = cv2.VideoWriter_fourcc(*'h264') 
+        out = cv2.VideoWriter(out_path, fourcc, write_fps, (w,h))
+        for frame in tqdm(out_frames):
+            out.write(frame)
+        out.release()
+        print('Written to {} @ {:0.2f}FPS'.format(out_path, write_fps))
