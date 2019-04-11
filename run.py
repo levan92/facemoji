@@ -92,8 +92,11 @@ else:
     print('Live video initializing..')
     stream = VideoStream(cam_name, video_path) 
 
-if video_mode:
-    video_info = stream.getInfo()
+# if video_mode:
+video_info = stream.getInfo()
+show_win_name = 'FacEmoji'
+cv2.namedWindow(show_win_name, cv2.WINDOW_NORMAL)
+cv2.resizeWindow(show_win_name, (video_info['width']*1, video_info['height']*1 ))
 
 if capture:
     out_frames = []
@@ -126,7 +129,7 @@ try:
             show_frame = drawer.draw_emoji(frame, emoji_bbs)
             # show_frame = deepcopy(frame)
             if show_live:
-                cv2.imshow('',show_frame)
+                cv2.imshow(show_win_name,show_frame)
             if capture:
                 out_frames.append(show_frame)
                 # stream.capture(frame_count)            
