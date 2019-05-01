@@ -8,10 +8,11 @@ from queue import Queue
 from collections import deque
 import time
 class VideoStream:
-    def __init__(self, camName, vidPath, queueSize=5, reconnectThreshold=20):
+    def __init__(self, camName, vidPath, queueSize=5, reconnectThreshold=20, live=True):
         self.vidPath = vidPath
         self.camName = camName
         self.Q = deque(maxlen=queueSize)
+        self.live = live
         # self.stream = cv2.VideoCapture(vidPath, cv2.CAP_GSTREAMER)
         try:
             self.stream = cv2.VideoCapture(self.vidPath)
@@ -60,8 +61,12 @@ class VideoStream:
         video_info['width'] = int(self.stream.get(3))
         video_info['height'] = int(self.stream.get(4))
         video_info['fps'] = self.stream.get(cv2.CAP_PROP_FPS)
-        video_info['total_frames'] = self.stream.get(cv2.CAP_PROP_FRAME_COUNT)
-        video_info['duration'] = video_info['fps'] * video_info['total_frames']
+        if not self.live: 
+            video_info['total_frames'] = self.stream.get(cv2.CAP_PROP_FRAME_COUNT)
+            video_info['duration'] = video_info['fps'] * video_info['total_frames']
+        # else:
+        #     video_info['total_frames'] = None
+        #     video_info['duration'] = None
         # video_info['start_time'] = 0 #in secs elapsed
         # video_info['context'] = context
         # video_info['cam'] = cam
