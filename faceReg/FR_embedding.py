@@ -1,11 +1,15 @@
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
-from keras.models import load_model
+# from keras.models import load_model, model_from_json
 from keras.utils import CustomObjectScope
 import time
 import cv2
 import numpy as np
 import os
+if __name__ == '__main__':
+    from openface_nn4_small2 import openface_nn4_small2
+else:
+    from .openface_nn4_small2 import openface_nn4_small2
 
 CURR_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -27,15 +31,23 @@ def flip_lr(faces):
 class FR_openface:
     def __init__(self, model_h5=None, gpu_usage=0.5, do_flip=False):
         config = tf.ConfigProto()
+        # config.gpu_options.allow_growth = True
         config.gpu_options.per_process_gpu_memory_fraction = gpu_usage
         set_session(tf.Session(config=config))
-        if model_h5 is None:
-            model_h5 = 'nn4.small2.py3.h5'
+        # if model_h5 is None:
+            # model_h5 = 'nn4.small2.py3.h5'
             # model_h5 = 'nn4.small2.cas-peal.304.unfrozen.h5'
-        model_h5 = os.path.join(CURR_DIR, model_h5)
-        assert os.path.exists(model_h5),'{} does not exists'.format(model_h5)
-        with CustomObjectScope({'tf':tf}):
-            self.model = load_model(model_h5)     
+        # model_h5 = os.path.join(CURR_DIR, model_h5)
+        # assert os.path.exists(model_h5),'{} does not exists'.format(model_h5)
+
+        if model_h5 is None:
+            model_name = 'nn4.small2'
+        weights_h5 = os.path.join(CURR_DIR,'{}.weights.h5'.format(model_name))        
+        assert os.path.exists(weights_h5),'{} does not exists'.format(weights_h5)
+
+        self.model = openface_nn4_small2(weights = weights_h5)
+        # with CustomObjectScope({'tf':tf}):
+        #     self.model = load_model(model_h5)     
         self.do_flip = do_flip
         #warm up
         self.model.predict_on_batch(np.zeros((1,96,96,3)))
@@ -117,21 +129,22 @@ class FR_openface:
 
 
 if __name__ == "__main__":
-    import time
+    # import time
     faceReg = FR_openface(gpu_usage=0.8)
-    image = cv2.imread('/home/dh/Workspace/FR/master_fr/dlib_FD/test_frame1.png')
-    image = cv2.resize(image, (96,96))
-    print(image.shape)
-    num_face = 10
-    num_cam = 10
-    faces = [image] * num_face
-    cams_faces = [faces] * num_cam
-    cams_faces = np.array(cams_faces)
-    print(cams_faces.shape)
-    n = 20
-    start = time.time()
-    for _ in range(n):
-        embeddings = faceReg.get_embeds_batch(cams_faces)
+    faceReg.model.summary()
+    # image = cv2.imread('/home/dh/Workspace/FR/master_fr/dlib_FD/test_frame1.png')
+    # image = cv2.resize(image, (96,96))
+    # print(image.shape)
+    # num_face = 10
+    # num_cam = 10
+    # faces = [image] * num_face
+    # cams_faces = [faces] * num_cam
+    # cams_faces = np.array(cams_faces)
+    # print(cams_faces.shape)
+    # n = 20
+    # start = time.time()
+    # for _ in range(n):
+    #     embeddings = faceReg.get_embeds_batch(cams_faces)
    
     
-    print('time for face reg:{}'.format((time.time() - start)/n))
+    # print('time for face reg:{}'.format((time.time() - start)/n))

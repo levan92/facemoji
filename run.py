@@ -87,10 +87,10 @@ if frames_mode:
 elif video_mode:
     # then video stream does not drop frames to maintain real-time-liness, therefore, queue maxlen is None
     print('Video mode initializing..')
-    stream = VideoStream(cam_name, video_path, queueSize = None)
+    stream = VideoStream(cam_name, video_path, queueSize = None, live=False)
 else:
     print('Live video initializing..')
-    stream = VideoStream(cam_name, video_path) 
+    stream = VideoStream(cam_name, video_path, live=True) 
 
 # if video_mode:
 video_info = stream.getInfo()
