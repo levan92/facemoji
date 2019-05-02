@@ -13,12 +13,12 @@ To see help for arguments:
 
 
 ## My Stack
-CUDA 9.0
-cudnn 7.4.2
-cv2 v3.4.0
-tensorflow-gpu==1.13.1
-keras==2.1.3
-dlib==19.9.99 
+- CUDA 9.0
+- cudnn 7.4.2
+- cv2 v3.4.0
+- tensorflow-gpu==1.13.1
+- keras==2.1.3
+- dlib==19.9.99 
 
 ## Adapted from
 - FR network: nn4_small2 from CMU [Openface](https://cmusatyalab.github.io/openface/) 
