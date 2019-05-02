@@ -19,7 +19,7 @@ To see help for arguments:
 - dlib==19.9.99 
 
 ## Notes on FR model
-- Under faceReg directory, openface_nn4_small2.py contains the model architecture in Keras.
+- Under [faceReg](faceReg) directory, [openface_nn4_small2.py](faceReg/openface_nn4_small2.py) contains the model architecture in Keras.
 - openface_convert_weights.py loads the architecture in Keras, then reads the weights in CSV format (in openface_nn4_small2_csv_weights directory), then loads it into the model. In the script we can then separate save out the weights in a HDF5 (.h5) file. 
 - saving the weights separately from the architecture (as compared to saving the entire weight-loaded model) allows portability between Python3 versions. 
 
